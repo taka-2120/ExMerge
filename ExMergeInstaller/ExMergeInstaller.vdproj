@@ -106,7 +106,7 @@
                 {
                 "Name" = "8:.NET Core"
                 "Message" = "8:[VSDNETCOREMSG]"
-                "FrameworkVersion" = "8:8.0.3 "
+                "FrameworkVersion" = "8:8.0.3  "
                 "AllowLaterVersions" = "11:FALSE"
                 "InstallUrl" = "8:https://dotnet.microsoft.com/download/dotnet-core/[NetCoreVerMajorDotMinor]"
                 "IsNETCore" = "11:TRUE"
@@ -173,15 +173,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:ExMerge"
-        "ProductCode" = "8:{EEE461AC-CD34-4B64-8DB5-2A42A7C61EF9}"
-        "PackageCode" = "8:{8B5EB339-CF98-4621-A459-811C13D186F8}"
+        "ProductCode" = "8:{68F5371C-D01E-48DB-86E8-A2845B3F0C41}"
+        "PackageCode" = "8:{DA24256E-67A8-42C7-8F89-55C16DC0FCD1}"
         "UpgradeCode" = "8:{058357E2-7F02-4F25-8CDE-8C313D3C30B3}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:1.0.1"
+        "ProductVersion" = "8:1.0.2"
         "Manufacturer" = "8:Yu Takahashi"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
@@ -723,7 +723,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_41876ED7315D472B8CBF391BF789CE29"
             {
-            "SourcePath" = "8:..\\ExMerge\\obj\\Release\\net8.0-windows\\apphost.exe"
+            "SourcePath" = "8:..\\ExMerge\\obj\\Debug\\net8.0-windows\\apphost.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_7DF3E18B2317472EA40AF8047104367A"
