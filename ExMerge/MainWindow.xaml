@@ -19,8 +19,8 @@
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,8">
                 <TextBlock Text="保存場所: " Margin="0,0,10,0"/>
-                <Button x:Name="chooseOutput" Click="chooseOutputButton_Click">選択</Button>
-                <TextBlock x:Name="outputDirectoryTextBox" Text="" Width="150" Margin="0"/>
+                <Button x:Name="chooseOutput" Click="chooseOutputButton_Click" Padding="10 0 10 0">選択</Button>
+                <TextBlock x:Name="outputDirectoryTextBox" Text="" Width="150" Margin="3,0,10,0"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,8">
