@@ -19,6 +19,8 @@ namespace ExMerge
         public MainWindow()
         {
             InitializeComponent();
+            issueMonthTextBox.Text = (DateTime.Now.Month - 1).ToString();
+            outputFileNameTextBox.Text = $"支払明細書{issueMonthTextBox.Text}月";
         }
 
         private void mergeButton_click(object sender, RoutedEventArgs e)
@@ -105,6 +107,8 @@ namespace ExMerge
                 }
                 payments.RemoveAt(0);
 
+                Console.WriteLine(payments);
+
                 // Output
                 var codeHistory = new List<string>();
                 var pageProgress = 1;
@@ -115,7 +119,7 @@ namespace ExMerge
                     var sheet = createFormat(outputPackage, int.Parse(issueMonthTextBox.Text), rowProgress);
                     if (page.Count > 1)
                     {
-                        var pageCell = sheet.Cells[1 + rowProgress, 9];
+                        var pageCell = sheet.Cells[1 + rowProgress, 10];
                         pageCell.Value = $"No. {pageProgress}";
                     }
                     rowProgress += 4;
@@ -141,17 +145,23 @@ namespace ExMerge
 
                             if (item.payment.Amount != 0)
                             {
-                                sheet.Cells[rowProgress, 3].Value = item.payment.Amount;
+                                sheet.Cells[rowProgress, 4].Value = item.payment.Amount;
                             }
                         }
 
-                        var nameCell = sheet.Cells[rowProgress, 2];
+                        var codeCell = sheet.Cells[rowProgress, 2];
+                        codeCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                        codeCell.Value = item.payment.Code;
+                        codeCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+
+                        var nameCell = sheet.Cells[rowProgress, 3];
                         nameCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                        nameCell.Value = item.payment.Name;
+                        nameCell.Value = Utils.fullToHalf(item.payment.Name);
+                        nameCell.Style.ShrinkToFit = true;
 
                         if (item.payment.Amount != 0)
                         {
-                            sheet.Cells[rowProgress, 3].Value = item.payment.Amount;
+                            sheet.Cells[rowProgress, 4].Value = item.payment.Amount;
                         }
 
                         for (int j = 0; j < 9; j++)
@@ -166,8 +176,8 @@ namespace ExMerge
 
                     // Add Sub Total
                     var subTotal = page.Sum(payment => payment.Amount);
-                    sheet.Cells[rowProgress, 2].Value = "小計";
-                    sheet.Cells[rowProgress, 3].Value = subTotal;
+                    sheet.Cells[rowProgress, 3].Value = "小計";
+                    sheet.Cells[rowProgress, 4].Value = subTotal;
                     totalAmount += subTotal;
 
                     rowProgress += 1;
@@ -175,8 +185,8 @@ namespace ExMerge
                     if (pageProgress == payments.Count)
                     {
                         // Add Total
-                        sheet.Cells[rowProgress, 2].Value = "合計";
-                        sheet.Cells[rowProgress, 3].Value = totalAmount;
+                        sheet.Cells[rowProgress, 3].Value = "合計";
+                        sheet.Cells[rowProgress, 4].Value = totalAmount;
 
                         rowProgress += 1;
                     }
@@ -243,40 +253,54 @@ namespace ExMerge
         private ExcelWorksheet createFormat(ExcelPackage package, int month, int initRow)
         {
             var sheet = package.Workbook.Worksheets[0];
+            sheet.Cells.Style.Font.Size = 10;
+            sheet.Columns.Width = 8;
+            sheet.Rows.Height = 15;
+
+            // Leading Column
+            sheet.Column(1).Width = 2.5;
 
             // Title
-            sheet.Cells[$"C{1 + initRow}:G{1 + initRow}"].Merge = true;
+            sheet.Cells[$"C{1 + initRow}:H{1 + initRow}"].Merge = true;
             var titleCell = sheet.Cells[1 + initRow, 3];
             titleCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             titleCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
             titleCell.Value = $"{month}月分支払明細書";
 
             // Header
-            sheet.Cells[$"A{3 + initRow}:B{4 + initRow}"].Merge = true;
-            var nameCell = sheet.Cells[3 + initRow, 1];
+            sheet.Cells[$"B{3 + initRow}:B{4 + initRow}"].Merge = true;
+            var codeCell = sheet.Cells[3 + initRow, 2];
+            codeCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            codeCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            codeCell.RichText.Add("支払先\r\nコード");
+            sheet.Column(2).Width = 9;
+
+            sheet.Cells[$"C{3 + initRow}:C{4 + initRow}"].Merge = true;
+            var nameCell = sheet.Cells[3 + initRow, 3];
             nameCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             nameCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
             nameCell.Value = "支払先名";
-            sheet.Column(1).Width = 3;
+            sheet.Column(3).Width = 15;
 
-            sheet.Cells[$"C{3 + initRow}:C{4 + initRow}"].Merge = true;
-            var amountCell = sheet.Cells[3 + initRow, 3];
+            sheet.Cells[$"D{3 + initRow}:D{4 + initRow}"].Merge = true;
+            var amountCell = sheet.Cells[3 + initRow, 4];
             amountCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             amountCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
             amountCell.Value = "請求金額";
+            sheet.Column(4).Width = 10;
 
-            sheet.Cells[$"D{3 + initRow}:I{3 + initRow}"].Merge = true;
-            var largeHeaderCell = sheet.Cells[3 + initRow, 4];
+            sheet.Cells[$"E{3 + initRow}:J{3 + initRow}"].Merge = true;
+            var largeHeaderCell = sheet.Cells[3 + initRow, 5];
             largeHeaderCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             largeHeaderCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
             largeHeaderCell.Value = "支払金額内訳";
 
-            sheet.Cells[4 + initRow, 4].Value = "相殺";
-            sheet.Cells[4 + initRow, 5].Value = "手形";
-            sheet.Cells[4 + initRow, 6].Value = "期日";
-            sheet.Cells[4 + initRow, 7].Value = "小切手";
-            sheet.Cells[4 + initRow, 8].Value = "振込";
-            sheet.Cells[4 + initRow, 9].Value = "備考";
+            sheet.Cells[4 + initRow, 5].Value = "相殺";
+            sheet.Cells[4 + initRow, 6].Value = "手形";
+            sheet.Cells[4 + initRow, 7].Value = "期日";
+            sheet.Cells[4 + initRow, 8].Value = "小切手";
+            sheet.Cells[4 + initRow, 9].Value = "振込";
+            sheet.Cells[4 + initRow, 10].Value = "備考";
 
             // Sheet format
             sheet.PrinterSettings.PaperSize = ePaperSize.A4;
