@@ -48,8 +48,7 @@ namespace ExMerge
 
 
             ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-            var payments = new List<List<Payment>>();
-            payments = [[]];
+            var payments = new List<Payment>();
 
             foreach (var file in files)
             {
@@ -72,7 +71,7 @@ namespace ExMerge
                         Name = name,
                         Amount = amount ?? 0,
                     };
-                    payments[0].Add(payment);
+                    payments.Add(payment);
                     rowCount++;
                 }
             }
@@ -92,114 +91,119 @@ namespace ExMerge
                 }
             }
 
-            try
+            /*try
+            {*/
+            var outputFile = new FileInfo(outputPath);
+            var outputPackage = new ExcelPackage(outputFile);
+            outputPackage.Workbook.Worksheets.Add("Sheet1");
+
+            // Sort payments by code
+            payments.Sort((lhs, rhs) => lhs.Code.CompareTo(rhs.Code));
+
+            // Output
+            var codeHistory = new List<string>();
+            var pageProgress = 1;
+            var totalRowProgress = 0;
+            var totalAmount = 0;
+            while (payments.Count > 0)
             {
-                var outputFile = new FileInfo(outputPath);
-                var outputPackage = new ExcelPackage(outputFile);
-                outputPackage.Workbook.Worksheets.Add("Sheet1");
+                var sheet = createFormat(outputPackage, int.Parse(issueMonthTextBox.Text), totalRowProgress);
 
-                // Sort payments
-                payments[0].Sort((lhs, rhs) => lhs.Code.CompareTo(rhs.Code));
-                var pageCount = (int)Math.Ceiling(payments[0].Count / (double)RowLimit);
-                for (int i = 0; i < pageCount; i++)
+                // Page number
+                var pageCell = sheet.Cells[1 + totalRowProgress, 10];
+                pageCell.Value = $"No. {pageProgress}";
+
+                // Increment for header rows
+                totalRowProgress += 4;
+
+                var computedPaymentCount = 0;
+                var subTotal = 0;
+                foreach (var payment in payments)
                 {
-                    payments.Add(payments[0].Skip(i * RowLimit).Take(RowLimit).ToList());
-                }
-                payments.RemoveAt(0);
-
-                Console.WriteLine(payments);
-
-                // Output
-                var codeHistory = new List<string>();
-                var pageProgress = 1;
-                var rowProgress = 0;
-                var totalAmount = 0;
-                foreach (var page in payments)
-                {
-                    var sheet = createFormat(outputPackage, int.Parse(issueMonthTextBox.Text), rowProgress);
-                    if (page.Count > 1)
+                    if (computedPaymentCount >= RowLimit)
                     {
-                        var pageCell = sheet.Cells[1 + rowProgress, 10];
-                        pageCell.Value = $"No. {pageProgress}";
+                        break;
                     }
-                    rowProgress += 4;
 
-                    foreach (var item in page.Select((payment, i) => new { i, payment }))
+                    // Operation per Page
+                    computedPaymentCount += 1;
+                    totalRowProgress += 1;
+
+                    int matchedCount = payments.FindAll(p => p.Code == payment.Code).Count - 1;
+                    if (!codeHistory.Contains(payment.Code) && matchedCount > 0)
                     {
-                        rowProgress += 1;
-
-                        if (codeHistory.Contains(item.payment.Code))
+                        // If matchedCount over row limit, skip merging
+                        if (matchedCount + computedPaymentCount > RowLimit)
                         {
-                            int matchedCount = codeHistory.FindAll(code => code == item.payment.Code).Count;
-
-                            sheet.Cells[$"B{rowProgress - matchedCount}:B{rowProgress}"].Merge = true;
-
-                            for (int j = 0; j < 9; j++)
-                            {
-                                if (j == 1)
-                                {
-                                    continue;
-                                }
-                                // sheet.Cells[rowProgress, j + 1].Style.Border = Border
-                            }
-
-                            if (item.payment.Amount != 0)
-                            {
-                                sheet.Cells[rowProgress, 4].Value = item.payment.Amount;
-                            }
+                            totalRowProgress += RowLimit - computedPaymentCount;
+                            break;
                         }
 
-                        var codeCell = sheet.Cells[rowProgress, 2];
+                        sheet.Cells[$"B{totalRowProgress}:B{totalRowProgress + matchedCount}"].Merge = true;
+
+                        if (payment.Amount != 0)
+                        {
+                            sheet.Cells[totalRowProgress, 4].Value = payment.Amount;
+                        }
+                    }
+
+                    if (!codeHistory.Contains(payment.Code))
+                    {
+                        var codeCell = sheet.Cells[totalRowProgress, 2];
                         codeCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                        codeCell.Value = item.payment.Code;
+                        codeCell.Value = payment.Code;
                         codeCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
-                        var nameCell = sheet.Cells[rowProgress, 3];
-                        nameCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                        nameCell.Value = Utils.fullToHalf(item.payment.Name);
-                        nameCell.Style.ShrinkToFit = true;
-
-                        if (item.payment.Amount != 0)
-                        {
-                            sheet.Cells[rowProgress, 4].Value = item.payment.Amount;
-                        }
-
-                        for (int j = 0; j < 9; j++)
-                        {
-                            // sheet.Cells[rowProgress, j + 1].Style.Border = 
-                        }
-
-                        codeHistory.Add(item.payment.Code);
                     }
 
-                    rowProgress += 1;
+                    var nameCell = sheet.Cells[totalRowProgress, 3];
+                    nameCell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                    nameCell.Value = Utils.fullToHalf(payment.Name);
+                    nameCell.Style.ShrinkToFit = true;
 
-                    // Add Sub Total
-                    var subTotal = page.Sum(payment => payment.Amount);
-                    sheet.Cells[rowProgress, 3].Value = "小計";
-                    sheet.Cells[rowProgress, 4].Value = subTotal;
-                    totalAmount += subTotal;
-
-                    rowProgress += 1;
-
-                    if (pageProgress == payments.Count)
+                    if (payment.Amount != 0)
                     {
-                        // Add Total
-                        sheet.Cells[rowProgress, 3].Value = "合計";
-                        sheet.Cells[rowProgress, 4].Value = totalAmount;
-
-                        rowProgress += 1;
+                        sheet.Cells[totalRowProgress, 4].Value = payment.Amount;
                     }
-                    pageProgress += 1;
+
+                    for (int j = 0; j < 9; j++)
+                    {
+                        // sheet.Cells[rowProgress, j + 1].Style.Border = 
+                    }
+
+                    codeHistory.Add(payment.Code);
+                    subTotal += payment.Amount;
                 }
 
-                outputPackage.Save();
+                // Remove processed payments
+                payments.RemoveAll(payment => codeHistory.Contains(payment.Code));
 
-                MessageBox.Show(this, $"ファイルの結合に成功しました。\nファイルの保存場所: {outputDirectory}", "メッセージ", MessageBoxButton.OK, MessageBoxImage.Information);
-            }catch (Exception error)
+                totalRowProgress += 1;
+
+                // Add Sub Total
+                sheet.Cells[totalRowProgress, 3].Value = "小計";
+                sheet.Cells[totalRowProgress, 4].Value = subTotal;
+                totalAmount += subTotal;
+
+                totalRowProgress += 1;
+
+                if (payments.Count == 0)
+                {
+                    // Add Total
+                    sheet.Cells[totalRowProgress, 3].Value = "合計";
+                    sheet.Cells[totalRowProgress, 4].Value = totalAmount;
+
+                    totalRowProgress += 1;
+                }
+                pageProgress += 1;
+            }
+
+            outputPackage.Save();
+
+            MessageBox.Show(this, $"ファイルの結合に成功しました。\nファイルの保存場所: {outputDirectory}", "メッセージ", MessageBoxButton.OK, MessageBoxImage.Information);
+            /*} catch (Exception error)
             {
                 MessageBox.Show(this, $"Excelファイルの操作に失敗しました。\n{error.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            }*/
         }
 
         private void chooseButton_Click(object sender, RoutedEventArgs e)
